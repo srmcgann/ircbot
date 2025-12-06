@@ -24,9 +24,21 @@ var config = {
       joined: false,
       client: null,
     },
+    /*
+    { host: 'irc.us.ircnet.net',
+      port: 6667,
+      nick: 'accuracy_test',
+      channels: [
+        //{ name: '#art',         log: '' },
+        { name: '#coordinates', log: '' },
+        { name: '#accuracy',    log: '' },
+      ],
+      joined: false,
+      client: null,
+    },*/
     { host: 'irc.rizon.net',
       port: 6667,
-      nick: 'accuracy',
+      nick: 'accuracy_test',
       channels: [
         { name: '#8chan',        log: '' },
         { name: '#art',          log: '' },
@@ -141,6 +153,15 @@ function wordmash(msg, chan, chatter, client){
   }
 }
 
+const anagrams = (msg, chan, chatter, client) => {
+  var str = `php anagrams.php ${msg} ` + ('_').repeat(msg.length)
+  exec(str, (error, stdout, stderr) => {
+    //let v=stdout.split("\n")
+    console.log(stdout)
+    client.write(`PRIVMSG ${chan} :anagrams for "${msg}" ->  ${stdout}\r\n`)
+  })
+}
+
 
 //////////////////////////////////////////
 
@@ -163,6 +184,7 @@ const ConnectToIRCNetwork = server => {
       if(txt.split(' :').length > 1 &&
          (
          txt.split(' :')[1].indexOf(' up your hostname (cached)') !== -1 ||
+         txt.split(' :')[1].indexOf('Please wait while we process your connection.') !== -1 ||
          txt.split(' :')[1].indexOf(' up your hostname...') !== -1
          )){
         stage = 'USER'
@@ -204,22 +226,19 @@ const ConnectToIRCNetwork = server => {
               var command = ret.join('')
               
               
+              // '!' commands, e.g. "!scramble"
               // pre-execution
               switch(command){
-                /*
-                case 'anagrams':
-                  if(message.trim().split(' ').length > 1){
-                    server.anagram = {
-                      word: message.trim().split(' ')[1],
-                      results: [],
-                    }
-                    console.log(server)
+                case 'anagrams': case 'anagram':
+                  if(message.trim().split(' ').length>1){
+                    var an = message.trim().split(' ')[1]
+                    anagrams(an, channel, sender, client)
+                  }else{
+                    client.write(`PRIVMSG ${channel} :${sender}, you need to supply a word, e.g. !anagram trees\r\n`);
                   }
                 break
-                */
 
                 case 'scramble':
-                    //var txtmsg = '' //message.trim().split(' ')[1]
                     var scram = '.scramble ' + (message.trim().split(' ').length>1 ?
                     message.trim().split(' ')[1] : '')
                     wordmash(scram, channel, sender, client)
