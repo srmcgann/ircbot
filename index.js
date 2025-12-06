@@ -2,45 +2,63 @@ const net = require('net');
 const { exec, spawn, fork } = require('child_process');
 const readline = require('readline');
 
+var config = {
+  servers: [
+    { host: 'irc.mzima.net',
+      port: 6667,
+      nick: 'accuracy',
+      channels: [
+        { name: '#art',         log: '' },
+        { name: '#birdnest',    log: '' },
+        { name: '#coders',      log: '' },
+        { name: '#coordinates', log: '' },
+        { name: '#asm',         log: '' },
+        { name: '#demoscene',   log: '' },
+        { name: '#graphics',    log: '' },
+        { name: '#HRL',         log: '' },
+        { name: '#metal',       log: '' },
+        { name: '#accuracy',    log: '' },
+        { name: '#specdev',     log: '' },
+        { name: '#status',      log: '' },
+      ],
+      joined: false,
+      client: null,
+    },
+    { host: 'irc.rizon.net',
+      port: 6667,
+      nick: 'accuracy',
+      channels: [
+        { name: '#8chan',        log: '' },
+        { name: '#art',          log: '' },
+        { name: '#chatfriendly', log: '' },
+        { name: '#freespeech',   log: '' },
+        { name: '#coordinates',  log: '' },
+        { name: '#accuracy',     log: '' },
+        { name: '#psychology',   log: '' },
+        { name: '#uk',           log: '' },
+        { name: '#music',        log: '' },
+      ],
+      joined: false,
+      client: null,
+    },
+  ],
+}
 
-var client, joined = false
-var IRCHost = 'irc.rizon.net'
-var IRCPort = 6667
-var nick = 'accuracy0'
-var channels = [
-  {
-    name: '#accuracy',
-    log: '',
-  },
-  {
-    name: '#accuracy2',
-    log: '',
-  },
-  {
-    name: '#accuracy3',
-    log: '',
-  },
-  {
-    name: '#accuracy4',
-    log: '',
-  },
-  {
-    name: '#accuracy5',
-    log: '',
-  },
-]
-
-const ConnectToIRCNetwork = (network = IRCHost, port = IRCPort) => {
-  client = net.createConnection(port, network, () => {
+const ConnectToIRCNetwork = server => {
+  var network  = server.host
+  var port     = server.port
+  var nick     = server.nick
+  var channels = server.channels
+  var client   = server.client = net.createConnection(port, network, () => {
     console.log('connected to server!');
   });
-  
+
   client.on('data', (data) => {
-    
+
     var stage
     data.toString().split("\n").forEach(txt => {
       console.log(txt);
-      
+
       if(txt.split(' :').length > 1 &&
          (
          txt.split(' :')[1].indexOf(' up your hostname (cached)') !== -1 ||
@@ -48,19 +66,19 @@ const ConnectToIRCNetwork = (network = IRCHost, port = IRCPort) => {
          )){
         stage = 'USER'
       }
-      
+
       if(txt.indexOf('PING :') === 0) {
         stage = 'PING'
         var pong = txt.split(':')[1]
       }
-      
+
       if(txt.split(':').length > 2 &&
          txt.split(':')[1].indexOf(' PRIVMSG ') == -1 &&
          txt.indexOf(':End of /MOTD command') !== -1) {
         console.log("   ----> detected MOTD, attempting channel join\r\m")
         stage = 'JOIN'
       }
-      
+
       var commands = []
       if(txt.split(' ').length > 3 &&
          txt.split(' ')[1] === 'PRIVMSG') {
@@ -87,8 +105,8 @@ const ConnectToIRCNetwork = (network = IRCHost, port = IRCPort) => {
           }
         }
       }
-      
-      
+
+
       switch(stage){
         case 'USER':
           console.log("sending USER command\r\n")
@@ -99,7 +117,7 @@ const ConnectToIRCNetwork = (network = IRCHost, port = IRCPort) => {
           if(commands.length){
             var cmd = commands[0].trim()
             console.log('processing command: ', cmd, cmd.length)
-            
+
             switch(cmd){
               case 'joke':
                 exec('curl https://icanhazdadjoke.com/', (error, stdout, stderr) => {
@@ -109,8 +127,6 @@ const ConnectToIRCNetwork = (network = IRCHost, port = IRCPort) => {
               break
             }
           }
-          //console.log(`replying to ${sender}: ${sender}, i hear -> "${message}"`)
-          //client.write(`PRIVMSG ${channel} :${sender}, i hear -> "${message}"\r\n`);
         break
         case 'JOIN':
           var list = []
@@ -118,7 +134,7 @@ const ConnectToIRCNetwork = (network = IRCHost, port = IRCPort) => {
           list = list.join(',')
           console.log("joining channels...\r\n", list)
           client.write(`JOIN ${list}\r\n`);
-          joined = true
+          server.joined = true
         break
         case 'PING':
           console.log("sending pong\r\n")
@@ -132,51 +148,5 @@ const ConnectToIRCNetwork = (network = IRCHost, port = IRCPort) => {
     console.log('disconnected from server');
   });
 }
-ConnectToIRCNetwork()
 
-/*
-// Create a TCP server
-const server = net.createServer((socket) => {
-  console.log('Client connected');
-  
-  // Set encoding to utf8 so we receive strings instead of Buffer objects
-  socket.setEncoding('utf8');
-  
-  // Handle data from client
-  socket.on('data', (data) => {
-    console.log(data);
-    
-    // Echo the data back to the client
-    socket.write(`Echo: ${data}`);
-  });
-  
-  // Handle client disconnection
-  socket.on('end', () => {
-    console.log('Client disconnected');
-  });
-  
-  // Handle errors
-  socket.on('error', (err) => {
-    console.error('Socket error:', err);
-  });
-  
-  // Send a welcome message to the client
-  socket.write('Welcome to the TCP server!\r\n');
-  
-  const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout,
-    terminal: false
-  });
-
-  rl.on('line', (line) => {
-    socket.write(line + "\r\n");
-  });
-
-});
-
-// Start the server and listen on port 8080
-server.listen(8080, () => {
-  console.log('TCP Server running on port 8080');
-});
-*/
+config.servers.forEach(server => ConnectToIRCNetwork(server) )
