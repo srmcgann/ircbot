@@ -4,7 +4,7 @@ const readline = require('readline');
 
 var config = {
   servers: [
-    { host: 'irc.mzima.net',
+    /*{ host: 'irc.mzima.net',
       port: 6667,
       nick: 'accuracy',
       channels: [
@@ -23,26 +23,126 @@ var config = {
       ],
       joined: false,
       client: null,
-    },
+    }, */
     { host: 'irc.rizon.net',
       port: 6667,
-      nick: 'accuracy',
+      nick: 'accuracy_test',
       channels: [
-        { name: '#8chan',        log: '' },
-        { name: '#art',          log: '' },
-        { name: '#chatfriendly', log: '' },
-        { name: '#freespeech',   log: '' },
+        //{ name: '#8chan',        log: '' },
+        //{ name: '#art',          log: '' },
+        //{ name: '#chatfriendly', log: '' },
+        //{ name: '#freespeech',   log: '' },
         { name: '#coordinates',  log: '' },
         { name: '#accuracy',     log: '' },
-        { name: '#psychology',   log: '' },
-        { name: '#uk',           log: '' },
-        { name: '#music',        log: '' },
+        //{ name: '#psychology',   log: '' },
+        //{ name: '#uk',           log: '' },
+        //{ name: '#music',        log: '' },
       ],
       joined: false,
       client: null,
     },
   ],
 }
+
+
+
+
+//////////// games and tools /////////////
+
+var mashword=[]
+
+function getNewMash(str, chan, client){
+  let meta = ''
+  let scrambleLength = typeof mashword[chan] !== 'undefined' ? mashword[chan].scrambleLength : ''
+  console.log(str)
+  if((+str)>1 && (+str)<=10){
+    scrambleLength = ' '+str
+    meta = '    (the scramble length has been set to' + scrambleLength + ")"
+  }
+  exec('php masher.php newmash' + scrambleLength, (error, stdout, stderr) => {
+    let v=stdout.split("\n")
+    mashword[chan] = {answer: v[0].trim(), scramble: v[1], scrambleLength}
+    client.write('PRIVMSG ' + chan + ' :a new scramble is served!  ->  ' + v[1] + meta + "\r\n")
+    console.log('PRIVMSG ' + chan + ' :a new scramble is served!  ->  ' + v[1] + meta + "\r\n")
+  })
+}
+
+function wordcombos (letters) {
+  let result
+  if (letters.length <= 1) {
+    result = letters
+  } else {
+    result = []
+    for (let i = 0; i < letters.length; ++i) {
+      let firstword = letters[i]
+      let remainingletters = []
+      for (let j = 0; j < letters.length; ++j) {
+        if ( i != j ) remainingletters.push(letters[j])
+      }
+      let combos = wordcombos(remainingletters)
+      for (let j = 0; j < combos.length; ++j) {
+        result.push(firstword + combos[j])
+      }
+    }
+  }
+  return result
+}
+
+function checkMash(str, chan, chatter, client){
+  let answer = mashword[chan].answer.toUpperCase().split('')
+  let guess = str.trim().toUpperCase()//.split('')
+  let wc = wordcombos(answer)
+  if(guess.length !== answer.join('').length || (wc.indexOf(guess)===-1)){
+    client.write('PRIVMSG ' + chan + ' :Oops! you\'re not using the correct letters!  current scramble  ->  ' + mashword[chan].scramble + "\r\n");
+    console.log('PRIVMSG ' + chan + ' :Oops! you\'re not using the correct letters!  current scramble  ->  ' + mashword[chan].scramble + "\r\n");
+  } else {
+    if(guess == answer.join('')){
+      exec('php incrscore.php ' + chatter, (error, stdout, stderr) => {
+        let score = stdout
+        client.write('PRIVMSG ' + chan + ' :\u000352,1C\u000353,1O\u000354,1R\u000356,1R\u000357,1E\u000358,1C\u000360,1T\u000361,1!\u0003    "' + guess + '"    \u000356,1 ' + chatter + ' score: ' + score + " \u0003 \r\n")
+        console.log('PRIVMSG ' + chan + ' :\u000352,1C\u000353,1O\u000354,1R\u000356,1R\u000357,1E\u000358,1C\u000360,1T\u000361,1!\u0003    "' + guess + '"    \u000356,1 ' + chatter + ' score: ' + score + " \u0003 \r\n")
+        getNewMash('', chan, client)
+      })
+    }
+    //('PRIVMSG ' + chan + ' : ' + guess + ' ' + answer.join('') + ' ' + wc[0] + ' ' + wc.indexOf(guess) + ' ' + wc[wc.indexOf(guess)] + "\r\n")
+  }
+}
+
+function wordmash(msg, chan, chatter, client){
+  let str = msg.trim().substring(10)
+  if(Object.keys(mashword).length && typeof mashword[chan] !== 'undefined' && mashword[chan].scramble.length){
+    switch(str.split(' ')[0].toUpperCase()){
+      case 'STOP':
+        //serverRaw('PRIVMSG ' + chan + ' :' + 'scramble stopped... ' + "\r\n")
+        client.write('PRIVMSG ' + chan + ' :' + 'scramble stopped... ' + "\r\n")
+        console.log('PRIVMSG ' + chan + ' :' + 'scramble stopped... ' + "\r\n")
+        mashword[chan] = {answer: '', scramble: '', scrambleLength: mashword[chan].scrambleLength}
+      break
+      case 'RESET':
+        let l
+        getNewMash((l=str.split(' '))[l.length-1], chan, client)
+      break
+      case 'HINT':
+        client.write('PRIVMSG ' + chan + ' :' + "the current answer is: " + mashword[chan].answer.split('').map((v,i,a)=>i<=a.length/2?'*':v).join('') + "\r\n");
+        console.log('PRIVMSG ' + chan + ' :' + "the current answer is: " + mashword[chan].answer.split('').map((v,i,a)=>i<=a.length/2?'*':v).join('') + "\r\n");
+      break
+      default:
+        if(str.length<1 || !str){
+          client.write('PRIVMSG ' + chan + ' :' + "the current scramble is: " + mashword[chan].scramble + "\r\n");
+          console.log('PRIVMSG ' + chan + ' :' + "the current scramble is: " + mashword[chan].scramble + "\r\n");
+        }else{
+          checkMash(str, chan, chatter, client)
+        }
+      break
+    }
+  }else{
+    getNewMash(str, chan, client)
+  }
+}
+
+
+//////////////////////////////////////////
+
 
 const ConnectToIRCNetwork = server => {
   var network  = server.host
@@ -97,10 +197,36 @@ const ConnectToIRCNetwork = server => {
             chnl = chnl[0]
             //chnl.log += `${message}`
             message = message.replaceAll("\r", "").replaceAll("\n", "")
-            commands = message.toLowerCase().split(' ').filter(v=>v.length>3 && v[0] == '!').map(v=>{
+            commands = message.trim().toLowerCase().split(' ').filter(v=>v.length>3 && v[0] == '!').map(v=>{
               var ret = v.split('')
               ret.shift()
-              return ret.join('')
+              var command = ret.join('')
+              
+              
+              // pre-execution
+              switch(command){
+                /*
+                case 'anagrams':
+                  if(message.trim().split(' ').length > 1){
+                    server.anagram = {
+                      word: message.trim().split(' ')[1],
+                      results: [],
+                    }
+                    console.log(server)
+                  }
+                break
+                */
+
+                case 'scramble':
+                    //var txtmsg = '' //message.trim().split(' ')[1]
+                    wordmash(message.trim().split(' ')[1], channel, sender, client)
+                break
+                case 'hint':
+                  wordmash('.scramble hint', channel, sender, client)
+                break
+              }
+              
+              return command
             })
           }
         }
