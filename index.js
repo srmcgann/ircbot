@@ -4,7 +4,7 @@ const readline = require('readline');
 
 var config = {
   servers: [
-    /*{ host: 'irc.mzima.net',
+    { host: 'irc.mzima.net',
       port: 6667,
       nick: 'accuracy',
       channels: [
@@ -23,20 +23,20 @@ var config = {
       ],
       joined: false,
       client: null,
-    }, */
+    },
     { host: 'irc.rizon.net',
       port: 6667,
-      nick: 'accuracy_test',
+      nick: 'accuracy',
       channels: [
-        //{ name: '#8chan',        log: '' },
-        //{ name: '#art',          log: '' },
-        //{ name: '#chatfriendly', log: '' },
-        //{ name: '#freespeech',   log: '' },
+        { name: '#8chan',        log: '' },
+        { name: '#art',          log: '' },
+        { name: '#chatfriendly', log: '' },
+        { name: '#freespeech',   log: '' },
         { name: '#coordinates',  log: '' },
         { name: '#accuracy',     log: '' },
-        //{ name: '#psychology',   log: '' },
-        //{ name: '#uk',           log: '' },
-        //{ name: '#music',        log: '' },
+        { name: '#psychology',   log: '' },
+        { name: '#uk',           log: '' },
+        { name: '#music',        log: '' },
       ],
       joined: false,
       client: null,
@@ -89,6 +89,7 @@ function wordcombos (letters) {
 }
 
 function checkMash(str, chan, chatter, client){
+  console.log('------ checking mash --------')
   let answer = mashword[chan].answer.toUpperCase().split('')
   let guess = str.trim().toUpperCase()//.split('')
   let wc = wordcombos(answer)
@@ -109,9 +110,9 @@ function checkMash(str, chan, chatter, client){
 }
 
 function wordmash(msg, chan, chatter, client){
-  let str = msg.trim().substring(10)
   if(Object.keys(mashword).length && typeof mashword[chan] !== 'undefined' && mashword[chan].scramble.length){
-    switch(str.split(' ')[0].toUpperCase()){
+    var str = msg && msg.split(' ').length > 1 ? msg.split(' ')[1] : ''
+    switch(str.toUpperCase()){
       case 'STOP':
         //serverRaw('PRIVMSG ' + chan + ' :' + 'scramble stopped... ' + "\r\n")
         client.write('PRIVMSG ' + chan + ' :' + 'scramble stopped... ' + "\r\n")
@@ -219,7 +220,9 @@ const ConnectToIRCNetwork = server => {
 
                 case 'scramble':
                     //var txtmsg = '' //message.trim().split(' ')[1]
-                    wordmash(message.trim().split(' ')[1], channel, sender, client)
+                    var scram = '.scramble ' + (message.trim().split(' ').length>1 ?
+                    message.trim().split(' ')[1] : '')
+                    wordmash(scram, channel, sender, client)
                 break
                 case 'hint':
                   wordmash('.scramble hint', channel, sender, client)
