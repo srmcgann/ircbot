@@ -7,6 +7,7 @@ var config = {
     { host: 'irc.mzima.net',
       port: 6667,
       nick: 'accuracy',
+      pass: 'chrome57253',
       channels: [
         { name: '#art',         log: '' },
         { name: '#birdnest',    log: '' },
@@ -28,6 +29,7 @@ var config = {
     { host: 'irc.us.ircnet.net',
       port: 6667,
       nick: 'accuracy_test',
+      pass: 'chrome57253',
       channels: [
         //{ name: '#art',         log: '' },
         { name: '#coordinates', log: '' },
@@ -38,7 +40,8 @@ var config = {
     },*/
     { host: 'irc.rizon.net',
       port: 6667,
-      nick: 'accuracy_test',
+      nick: 'accuracy',
+      pass: 'chrome57253',
       channels: [
         { name: '#8chan',        log: '' },
         { name: '#art',          log: '' },
@@ -62,6 +65,21 @@ var config = {
 //////////// games and tools /////////////
 
 var mashword=[]
+
+function Dweet(str, chan, sender, client){
+  var executable = 'php'
+  var script = 'dweet.php'
+  var code = str
+  var child = spawn(executable, [script, code])
+  child.stdout.on('data', data => {
+    if(data.length>3){
+      client.write(`PRIVMSG ${chan} :${sender}, your demo link -> https://textfile.root.sx/d/${data}\r\n`)
+    }
+  })
+  child.stderr.on('data', data => {
+    client.write(`PRIVMSG ${chan} :${sender}, ruh roh, error -> data\r\n`)
+  })
+}
 
 function getNewMash(str, chan, client){
   let meta = ''
@@ -235,6 +253,14 @@ const ConnectToIRCNetwork = server => {
                     anagrams(an, channel, sender, client)
                   }else{
                     client.write(`PRIVMSG ${channel} :${sender}, you need to supply a word, e.g. !anagram trees\r\n`);
+                  }
+                break
+
+                case 'dweet':
+                  console.log('preparing')
+                  if(message.trim().split(' ').length>1){
+                    var code = message.trim().split(' ').filter((v,i)=>i).join(' ')
+                    Dweet(code, channel, sender, client)
                   }
                 break
 
