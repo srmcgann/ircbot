@@ -2,14 +2,17 @@ const net = require('net');
 const { exec, spawn, fork } = require('child_process');
 const readline = require('readline');
 
+const nick = 'actest'
+
 var config = {
   servers: [
     { host: 'irc.mzima.net',
+      nick,
       port: 6667,
-      nick: 'accuracy',
       pass: 'chrome57253',
+      userCommand: `USER ~${nick} 0 * :accuracy bot\r\n`,
       channels: [
-        { name: '#art',         log: '' },
+        //{ name: '#art',         log: '' },
         { name: '#birdnest',    log: '' },
         { name: '#coders',      log: '' },
         { name: '#coordinates', log: '' },
@@ -25,23 +28,32 @@ var config = {
       joined: false,
       client: null,
     },
-    /*
-    { host: 'irc.us.ircnet.net',
+    { host: 'irc.psychz.net',
+      nick,
       port: 6667,
-      nick: 'accuracy_test',
       pass: 'chrome57253',
+      userCommand: `USER ${nick} 0 * :accuracy bot\r\n`,
       channels: [
-        //{ name: '#art',         log: '' },
+        { name: '#art',         log: '' },
         { name: '#coordinates', log: '' },
         { name: '#accuracy',    log: '' },
+        { name: '#casual',    log: '' },
+        { name: '#chataholics',    log: '' },
+        { name: '#c++',    log: '' },
+        { name: '#philalethia',    log: '' },
+        { name: '#sprit',    log: '' },
+        { name: '#occult',    log: '' },
+        { name: '#esoteric',    log: '' },
+        { name: '#allnitecafe',    log: '' },
       ],
       joined: false,
       client: null,
-    },*/
+    },
     { host: 'irc.rizon.net',
+      nick,
       port: 6667,
-      nick: 'accuracy',
       pass: 'chrome57253',
+      userCommand: `USER ~${nick} 0 * :accuracy bot\r\n`,
       channels: [
         { name: '#8chan',        log: '' },
         { name: '#art',          log: '' },
@@ -215,7 +227,8 @@ const ConnectToIRCNetwork = server => {
 
       if(txt.split(':').length > 2 &&
          txt.split(':')[1].indexOf(' PRIVMSG ') == -1 &&
-         txt.indexOf(':End of /MOTD command') !== -1) {
+         (txt.indexOf(':End of ') !== -1 &&
+          txt.indexOf('MOTD command') !== -1)) {
         console.log("   ----> detected MOTD, attempting channel join\r\m")
         stage = 'JOIN'
       }
@@ -284,8 +297,9 @@ const ConnectToIRCNetwork = server => {
       switch(stage){
         case 'USER':
           console.log("sending USER command\r\n")
+          //client.write(`\r\n`);
           client.write(`NICK ${nick}\r\n`);
-          client.write(`USER ~${nick} 0 * :accuracy bot\r\n`);
+          client.write(server.userCommand);
         break
         case 'PRIVMSG':
           if(commands.length){
