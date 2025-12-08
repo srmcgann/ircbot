@@ -2,7 +2,7 @@ const net = require('net');
 const { exec, spawn, fork } = require('child_process');
 const readline = require('readline');
 
-const nick = 'actest'
+const nick = 'accuracy'
 
 var config = {
   servers: [
