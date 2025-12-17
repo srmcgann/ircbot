@@ -23,6 +23,7 @@ var config = {
         { name: '#metal',       log: '' },
         { name: '#accuracy',    log: '' },
         { name: '#specdev',     log: '' },
+        { name: '#starcontrol', log: '' },
         { name: '#status',      log: '' },
       ],
       joined: false,
@@ -251,7 +252,7 @@ const ConnectToIRCNetwork = server => {
             chnl = chnl[0]
             //chnl.log += `${message}`
             message = message.replaceAll("\r", "").replaceAll("\n", "")
-            commands = message.trim().toLowerCase().split(' ').filter(v=>v.length>3 && v[0] == '!').map(v=>{
+            commands = message.trim().toLowerCase().split(' ').filter((v, i) => !i && v[0] == '!').map(v=>{
               var ret = v.split('')
               ret.shift()
               var command = ret.join('')
